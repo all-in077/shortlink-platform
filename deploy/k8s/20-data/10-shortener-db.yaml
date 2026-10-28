@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: shortener-db
+  namespace: shortener
+spec:
+  clusterIP: None
+  selector:
+    app: shortener-db
+  ports:
+    - port: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: shortener-db
+  namespace: shortener
+spec:
+  serviceName: shortener-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app: shortener-db
+  template:
+    metadata:
+      labels:
+        app: shortener-db
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports:
+            - containerPort: 5432
+          envFrom:
+            - secretRef:
+                name: postgres-secret
+          env:
+            - name: POSTGRES_DB
+              value: url_shortener
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres", "-d", "url_shortener"]
+            periodSeconds: 5
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+            - name: schema
+              mountPath: /docker-entrypoint-initdb.d
+      volumes:
+        - name: schema
+          configMap:
+            name: shortener-db-schema
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi

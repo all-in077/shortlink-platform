@@ -1,0 +1,16 @@
+# секреты
+deploy/k8s/10-config/11-secrets.yaml
+.env
+
+# бинарники и дампы
+/kind
+/kubectl
+full_dump.txt
+*.tar
+
+# сборка и IDE
+*.exe
+*.test
+*.out
+.idea/
+.vscode/

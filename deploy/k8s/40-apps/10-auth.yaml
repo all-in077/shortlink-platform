@@ -1,0 +1,63 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth
+  namespace: shortener
+spec:
+  selector:
+    app: auth
+  ports:
+    - name: http
+      port: 8080
+    - name: grpc
+      port: 50051
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth
+  namespace: shortener
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth
+  template:
+    metadata:
+      labels:
+        app: auth
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: auth
+          image: shortener/auth:v1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: grpc
+              containerPort: 50051
+            - name: metrics
+              containerPort: 9090
+          envFrom:
+            - configMapRef:
+                name: auth-config
+            - secretRef:
+                name: auth-secret
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8080
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 256Mi

@@ -1,0 +1,99 @@
+apiVersion: v1
+data:
+  schema.sql: |-
+    CREATE TABLE IF NOT EXISTS urls (
+        id BIGSERIAL PRIMARY KEY,
+        short_code VARCHAR(10) NOT NULL UNIQUE,
+        long_url TEXT NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Индекс для мгновенного поиска по короткому коду
+    CREATE INDEX IF NOT EXISTS idx_urls_short_code ON urls(short_code);
+
+    CREATE TABLE IF NOT EXISTS outbox_events (
+        id BIGSERIAL PRIMARY KEY,
+        event_type VARCHAR(50) NOT NULL,
+        payload JSONB NOT NULL,
+        status VARCHAR(20) NOT NULL DEFAULT 'pending',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Индекс для воркера Outbox: выбираем только 'pending' записи
+    CREATE INDEX IF NOT EXISTS idx_outbox_events_status ON outbox_events(status) WHERE status = 'pending';
+
+    ALTER TABLE urls ADD COLUMN IF NOT EXISTS visit_count BIGINT NOT NULL DEFAULT 0;
+kind: ConfigMap
+metadata:
+  name: shortener-db-schema
+---
+apiVersion: v1
+data:
+  schema.sql: |-
+    CREATE TABLE users(
+        id UUID PRIMARY KEY,
+
+        email VARCHAR(254) NOT NULL UNIQUE,
+        password_hash VARCHAR(60) NOT NULL,
+
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
+
+
+    );
+
+
+    CREATE TABLE refresh_tokens(
+        id BIGSERIAL PRIMARY KEY,
+        token VARCHAR(240) NOT NULL UNIQUE,
+        user_id UUID NOT NULL,
+        expires_at TIMESTAMPTZ NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        revoked BOOLEAN DEFAULT FALSE NOT NULL,
+
+        CONSTRAINT fk_user_token
+            FOREIGN KEY (user_id)
+            REFERENCES users(id)
+            ON DELETE CASCADE
+    );
+
+    CREATE INDEX idx_refresh_tokens_user_id ON refresh_tokens(user_id);
+kind: ConfigMap
+metadata:
+  name: auth-db-schema
+---
+apiVersion: v1
+data:
+  schema.sql: |-
+    CREATE TABLE plans (
+        id VARCHAR(20) PRIMARY KEY,
+        name VARCHAR(50) NOT NULL,
+        limit_count BIGINT NOT NULL, -- -1 = unlimited
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
+    );
+
+    INSERT INTO plans (id, name, limit_count) VALUES
+        ('free', 'Free', 50),
+        ('pro', 'Pro', 5000),
+        ('enterprise', 'Enterprise', -1);
+
+    CREATE TABLE quotas (
+        user_id UUID PRIMARY KEY,
+        plan_id VARCHAR(20) NOT NULL REFERENCES plans(id),
+        used BIGINT NOT NULL DEFAULT 0,
+        limit_count BIGINT NOT NULL,
+        reset_at TIMESTAMPTZ NOT NULL,
+        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
+    );
+
+    CREATE TABLE reservations (
+        request_id UUID PRIMARY KEY,
+        user_id UUID NOT NULL REFERENCES quotas(user_id),
+        confirmed BOOLEAN NOT NULL DEFAULT FALSE,
+        reserved_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+
+    CREATE INDEX idx_reservations_pending ON reservations(reserved_at) WHERE confirmed = FALSE;
+kind: ConfigMap
+metadata:
+  name: billing-db-schema
+---
