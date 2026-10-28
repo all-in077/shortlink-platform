@@ -1,5 +1,7 @@
 # shortlink-platform
 
+[![CI](https://github.com/all-in077/shortlink-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/all-in077/shortlink-platform/actions)
+
 Учебная микросервисная платформа на Go. Предметная область (сокращатель ссылок) выбрана
 специально простой: основное внимание уделено паттернам, которые используются в
 продакшен-системах: transactional outbox, сага с компенсацией, идемпотентность,
