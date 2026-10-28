@@ -105,6 +105,8 @@ Prometheus: `localhost:9090`, Grafana: `localhost:3000`. Пароли в `docker
 
 ## Kubernetes
 
+> Манифесты проверены на kind до последних правок кода; перед запуском образы нужно пересобрать и загрузить.
+
 Манифесты лежат в `deploy/k8s` (kind): namespace, ConfigMap и Secret, StatefulSet для баз,
 Kafka и ZooKeeper, Deployment с пробами `/healthz` и `/readyz`. Секреты в репозиторий не
 входят: шаблон в `deploy/k8s/examples/11-secrets.example.yaml`. Перед запуском образы нужно
