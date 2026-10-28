@@ -24,9 +24,10 @@ flowchart LR
     K -- url-events --> AN[Analytics]
     K -- url-events --> N[Notification]
     AN --> CH[(ClickHouse)]
-    S --> PG1[(Postgres)]
-    A --> PG2[(Postgres)]
-    B --> PG3[(Postgres)]
+    S --> PG1[(Postgres: shortener)]
+    S -. "кэш, идемпотентность" .-> R
+    A --> PG2[(Postgres: auth)]
+    B --> PG3[(Postgres: billing)]
 ~~~
 
 | Сервис | Роль | Хранилище |
